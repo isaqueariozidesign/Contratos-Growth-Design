@@ -370,10 +370,10 @@ let sigCanvas,sigCtx,drawing=false;
 
 // ── ROUTER ────────────────────────────────────────────
 function route(){
-  const hash=window.location.hash;
-  if(hash.startsWith('#client:')){
+  const params=new URLSearchParams(window.location.search);
+  const encoded=params.get('contract');
+  if(encoded){
     try{
-      const encoded=hash.replace('#client:','');
       const c=JSON.parse(decodeURIComponent(escape(atob(encoded))));
       currentId=c.id;
       const local=getOne(c.id);
@@ -441,7 +441,7 @@ function genContract(){
 function buildLink(id){
   const c=getOne(id);
   const encoded=btoa(unescape(encodeURIComponent(JSON.stringify(c))));
-  return location.origin+location.pathname+'#client:'+encoded;
+  return location.origin+location.pathname+'?contract='+encoded;
 }
 function cpContractLink(id){ navigator.clipboard.writeText(buildLink(id)); toast('Link copiado!','success'); }
 function cpLink(){ navigator.clipboard.writeText(document.getElementById('m-link-txt').textContent); toast('Link copiado!','success'); }
