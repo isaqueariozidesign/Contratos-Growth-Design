@@ -1,27 +1,20 @@
-function improvedRouteFunction() {
+function route() {
     const urlParams = new URLSearchParams(window.location.search);
-    const contractParam = urlParams.get('contract');
-    let contractData;
-
-    // Try to get data from localStorage
-    if (localStorage.getItem('contractData')) {
-        contractData = JSON.parse(localStorage.getItem('contractData'));
-    }
-
-    // Fallback: decode contract parameter from URL 
-    if (!contractData && contractParam) {
-        try {
-            contractData = JSON.parse(atob(contractParam));
-            // Optionally save to localStorage for future consistency
-            localStorage.setItem('contractData', JSON.stringify(contractData));
-        } catch (e) {
-            console.error('Failed to decode contract parameter.', e);
+    const encodedData = urlParams.get('data');
+    let decodedData;
+    
+    // Attempt to decode the data safely
+    try {
+        if (encodedData) {
+            decodedData = decodeURIComponent(escape(atob(encodedData)));
+        } else {
+            throw new Error('No data provided.');
         }
+    } catch (error) {
+        console.error('Error decoding data:', error);
+        alert('Failed to decode contract data. Please check your URL parameters.');
+        return;
     }
-
-    if (contractData === null) {
-        // Handle the case when no contract data is available
-        console.warn('No contract data available.');
-    }
-    // Proceed with the rest of your route handling logic using contractData...
+    
+    // Further processing of decodedData... (add your logic here)
 }
