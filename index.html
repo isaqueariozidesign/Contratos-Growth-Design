@@ -297,7 +297,7 @@ const COL = 'contracts';
 window.DB = {
   async save(c)      { await setDoc(doc(db, COL, c.id), c); },
   async get(id)      { const s=await getDoc(doc(db,COL,id)); return s.exists()?s.data():null; },
-  async update(id,d) { await updateDoc(doc(db,COL,id), d); },
+  async update(id,d) { await setDoc(doc(db,COL,id), d, {merge:true}); },
   async remove(id)   { await deleteDoc(doc(db,COL,id)); },
   listen(cb) {
     const q = query(collection(db,COL), orderBy('createdAt','desc'));
