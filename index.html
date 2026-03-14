@@ -130,7 +130,33 @@
 </style>
 </head>
 <body>
+<div id="splash" style="position:fixed;inset:0;background:#0a0a0f;z-index:9999;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;">
+  <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;color:#e8e8f0;">Growth<span style="color:#0055ff">.</span>Design</div>
+  <div style="font-family:'DM Mono',monospace;font-size:11px;color:#6b6b80;letter-spacing:1px;">CARREGANDO...</div>
+</div>
 <div class="app">
+
+<!-- ══ LOGIN ══════════════════════════════════════════ -->
+<div class="view" id="view-login">
+  <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;">
+    <div style="width:100%;max-width:380px;">
+      <div style="text-align:center;margin-bottom:36px;">
+        <div class="logo" style="font-size:24px;margin-bottom:8px;">Growth<span>.</span>Design</div>
+        <div style="font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;">Acesso restrito</div>
+      </div>
+      <div class="card">
+        <div class="kb">
+          <div class="fg">
+            <label class="fl">Senha</label>
+            <input class="fi" id="login-pass" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+          </div>
+          <div id="login-error" style="display:none;font-size:12px;color:var(--red);margin-bottom:12px;">Senha incorreta. Tente novamente.</div>
+          <button class="btn btn-primary btn-full" onclick="doLogin()">Entrar →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- ══ DASHBOARD ══════════════════════════════════════ -->
 <div class="view active" id="view-dashboard">
@@ -153,7 +179,7 @@
 
 <!-- ══ CLIENT VIEW ════════════════════════════════════ -->
 <div class="view" id="view-client">
-  <header><div class="logo">Growth<span>.</span>Design</div><div class="badge">Assinatura Digital</div></header>
+  <header><div class="logo">Growth<span>.</span>Design</div><div style="display:flex;align-items:center;gap:10px;"><div class="badge">Assinatura Digital</div><button id="btn-exit-preview" onclick="exitPreview()" style="display:none;font-family:var(--mono);font-size:10px;color:var(--amber);background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);padding:3px 10px;border-radius:20px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;">← Sair da visualização</button></div></header>
   <div class="cwrap">
     <div class="ch"><div class="cl">Growth<span>.</span>Design</div><div class="csub">Expert Framer Pro · Proposta de Serviço</div></div>
     <div class="steps">
@@ -329,33 +355,71 @@ let sigCanvas,sigCtx,drawing=false;
 let unsubscribe=null;
 
 // ── INIT ──────────────────────────────────────────────
+// Hide splash immediately if client link
+(function(){
+  const params = new URLSearchParams(window.location.search);
+  if(!params.get('contract')){
+    // admin mode - dashboard will show after db-ready
+  }
+})();
+
 window.addEventListener('db-ready', ()=>{
   const params = new URLSearchParams(window.location.search);
   const encoded = params.get('contract');
 
   if(encoded){
-    // CLIENT MODE — decode contract from URL
+    // CLIENT MODE
     try{
       const c = JSON.parse(decodeURIComponent(escape(atob(encoded))));
       currentContract = c;
-      // Try to get latest from DB (in case already signed)
       window.DB.get(c.id).then(fresh=>{
         currentContract = fresh || c;
         loadClientView(currentContract);
         showView('client');
+        hideSplash();
       }).catch(()=>{
         loadClientView(c);
         showView('client');
+        hideSplash();
       });
     }catch(e){
+      hideSplash();
       alert('Link inválido ou corrompido.');
     }
   } else {
-    // ADMIN MODE — listen for real-time updates
-    showView('dashboard');
-    startListening();
+    // ADMIN MODE — check auth first
+    hideSplash();
+    if(isAuthed()){
+      showView('dashboard');
+      startListening();
+    } else {
+      showView('login');
+    }
   }
 });
+
+function hideSplash(){
+  const s=document.getElementById('splash');
+  if(s){ s.style.opacity='0'; s.style.transition='opacity 0.3s'; setTimeout(()=>s.remove(),300); }
+}
+
+const AUTH_KEY = 'gd_auth';
+const AUTH_PASS = 'Cinderela1973';
+
+function isAuthed(){ return sessionStorage.getItem(AUTH_KEY)==='1'; }
+
+function doLogin(){
+  const val = document.getElementById('login-pass').value;
+  if(val === AUTH_PASS){
+    sessionStorage.setItem(AUTH_KEY,'1');
+    showView('dashboard');
+    startListening();
+  } else {
+    document.getElementById('login-error').style.display='block';
+    document.getElementById('login-pass').value='';
+    document.getElementById('login-pass').focus();
+  }
+}
 
 // ── VIEWS ─────────────────────────────────────────────
 function showView(id){
@@ -462,6 +526,15 @@ function previewAsClient(){
   loadClientView(c);
   showView('client');
   goStep(1);
+  // Show exit preview button
+  document.getElementById('btn-exit-preview').style.display='block';
+  window._previewMode = true;
+}
+
+function exitPreview(){
+  document.getElementById('btn-exit-preview').style.display='none';
+  window._previewMode = false;
+  showView('dashboard');
 }
 
 async function removeContract(id){
@@ -657,13 +730,24 @@ function dlPDF(c){
   ].forEach(([t,tx])=>{ write(t,10,true,[0,55,255]); gap(1); write(tx,10); gap(3); });
 
   if(c.signatureData){
-    if(y>220){doc.addPage();y=20;} gap(4);
-    write('ASSINATURA DO CONTRATANTE',10,true,[0,55,255]); gap(2);
-    doc.setDrawColor(200,200,210); doc.line(M,y,M+100,y); gap(1);
-    try{ doc.addImage(c.signatureData,'PNG',M,y-18,78,18); }catch(e){}
-    gap(6);
+    // Always start signature on a new section with enough space
+    if(y>210){ doc.addPage(); y=20; }
+    gap(8);
+    write('ASSINATURA DO CONTRATANTE',10,true,[0,55,255]); gap(4);
+    // Signature box background
+    doc.setFillColor(245,245,250);
+    doc.roundedRect(M, y, W-M*2, 36, 2, 2, 'F');
+    doc.setDrawColor(180,180,200);
+    doc.roundedRect(M, y, W-M*2, 36, 2, 2, 'S');
+    // Signature image inside box
+    try{ doc.addImage(c.signatureData,'PNG', M+4, y+4, 90, 28); }catch(e){}
+    y += 40;
+    gap(4);
+    doc.setDrawColor(200,200,210);
+    doc.line(M, y, M+100, y);
+    gap(5);
     write(`${c.clientName||''}   |   CPF: ${c.clientCPF||''}`,9,false,[100,100,120]);
-    write(`Assinado em: ${new Date(c.signedAt).toLocaleString('pt-BR')}`,9,false,[100,100,120]);
+    write(`Assinado digitalmente em: ${new Date(c.signedAt).toLocaleString('pt-BR')}`,9,false,[100,100,120]);
   }
 
   for(let i=1;i<=doc.getNumberOfPages();i++){
