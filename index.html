@@ -181,7 +181,6 @@
 <div class="view" id="view-client">
   <header><div class="logo">Growth<span>.</span>Design</div><div style="display:flex;align-items:center;gap:10px;"><div class="badge">Assinatura Digital</div><button id="btn-exit-preview" onclick="exitPreview()" style="display:none;font-family:var(--mono);font-size:10px;color:var(--amber);background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);padding:3px 10px;border-radius:20px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;">← Sair da visualização</button></div></header>
   <div class="cwrap">
-    <div class="ch"><div class="cl">Growth<span>.</span>Design</div><div class="csub">Expert Framer Pro · Proposta de Serviço</div></div>
     <div class="steps">
       <div class="si active" id="si1"><div class="sn">1</div><span>Seus dados</span></div>
       <div class="sl"></div>
@@ -293,7 +292,10 @@
     <div class="mb">
       <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Copie o link e envie para o cliente via WhatsApp ou e-mail.</p>
       <div class="lb"><div class="lt" id="m-link-txt">—</div><button class="btn btn-ghost btn-sm" onclick="cpLink()">Copiar</button></div>
-      <button class="btn btn-primary btn-full" onclick="previewAsClient()">Visualizar como cliente</button>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <button class="btn btn-primary btn-full" onclick="openGmail()">✉ Enviar pelo Gmail</button>
+        <button class="btn btn-ghost btn-full" onclick="previewAsClient()">👁 Visualizar como cliente</button>
+      </div>
     </div>
   </div>
 </div>
@@ -507,6 +509,41 @@ async function genContract(){
 function cpLink(){
   navigator.clipboard.writeText(document.getElementById('m-link-txt').textContent);
   toast('Link copiado!','success');
+}
+
+function openGmail(){
+  const c = window._lastContract;
+  if(!c) return;
+  const link = document.getElementById('m-link-txt').textContent;
+  const plan = PLANS[c.plan];
+  const addonsArr = Object.keys(c.addons||{}).filter(k=>c.addons[k]);
+  const addonsTxt = addonsArr.length ? ' + ' + addonsArr.map(k=>ADDONS[k].name).join(' + ') : '';
+
+  const subject = encodeURIComponent('Contrato de Serviços — Growth Design');
+  const body = encodeURIComponent(
+`Olá,
+
+Segue o link para assinatura do seu contrato de prestação de serviços com a Growth Design.
+
+PLANO CONTRATADO
+Plano: ${plan.name}${addonsTxt}
+Valor: R$ ${c.total}/mês
+
+Para assinar, acesse o link abaixo, preencha seus dados e assine digitalmente:
+${link}
+
+O processo leva menos de 2 minutos.
+
+Em caso de dúvidas, estou à disposição.
+
+Atenciosamente,
+Isaque Ariozi
+Growth Design — Expert Framer Pro
+(11) 94144-6651`
+  );
+
+  const to = encodeURIComponent(c.clientEmail);
+  window.open(`https://mail.google.com/mail/?view=cm&to=${to}&su=${subject}&body=${body}`, '_blank');
 }
 
 async function copyLink(id){
